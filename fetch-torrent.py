@@ -1,9 +1,9 @@
-#!/usr/bin/env python
-
+#!/usr/bin/env python3
 
 import click
 import click_fish
 import click_log
+import html5lib
 import logging
 import requests
 import rfc6266

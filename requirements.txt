@@ -4,17 +4,20 @@
 # fetch-torrent.py: 11
 beautifulsoup4 == 4.6.0
 
-# fetch-torrent.py: 4
+# fetch-torrent.py: 3
 click == 6.7
 
-# fetch-torrent.py: 5
+# fetch-torrent.py: 4
 click_fish == 0.1.0
 
-# fetch-torrent.py: 6
+# fetch-torrent.py: 5
 click_log == 0.2.1
 
+# fetch-torrent.py: 6
+html5lib == 0.999999999
+
 # fetch-torrent.py: 8
-requests == 2.18.1
+requests == 2.18.4
 
 # fetch-torrent.py: 9
 rfc6266 == 0.0.4
