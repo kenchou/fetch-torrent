@@ -1,3 +1,4 @@
 {
-  "aria2-rpc-url": "http://token:{SECRET}@localhost:6800/jsonrpc"
+  "aria2-rpc-url": "http://localhost:6800/jsonrpc",
+  "token": ""
 }
