@@ -9,7 +9,8 @@ import requests
 import rfc6266
 
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+from pathlib import Path
+from urllib.parse import urljoin, urlparse
 
 
 LOGGING_LEVELS = {
@@ -18,7 +19,7 @@ LOGGING_LEVELS = {
     2: logging.DEBUG
 }
 
-
+proxies = None
 logger = logging.getLogger(__name__)
 click_log.basic_config(logger)
 
@@ -41,22 +42,43 @@ def mdt(url, proxy, verbose):
         proxies = {}
 
     r = requests.get(url, proxies=proxies)
-
     print('Code    :', r.status_code)
     print('Encoding:', r.encoding)
     print(r.headers)
+    print('r.url:', r.url)
+
+    dispatch(url)(r)
+
+
+def dispatch(url):
+    hostname = urlparse(url).hostname
+    return {
+        'jandown.com': post_form,
+        'www.jandown.com': post_form,
+        'rmdown.com': post_form,
+        'www.rmdown.com': post_form,
+    }[hostname]
+
+
+def post_form(response):
+    print('jandown:')
     # print(r.text)
-    doc = BeautifulSoup(r.text, 'html5lib')
+    doc = BeautifulSoup(response.text, 'html5lib')
     print(doc.form['action'])
     print('-------')
     data = {e['name']: e.get('value') for e in doc.form.find_all('input', {'name': True})}
     print(data)
 
     print('=======')
-    r = requests.post(urljoin(url, doc.form['action']), data=data, proxies=proxies)
+    r = requests.post(urljoin(response.url, doc.form['action']), data=data, proxies=proxies)
     print(r)
     print(r.headers)
-    filename = rfc6266.parse_headers(r.headers['Content-Disposition']).filename_unsafe
+    if 'Content-Disposition' in r.headers:
+        filename = rfc6266.parse_headers(r.headers['Content-Disposition']).filename_unsafe
+    elif 'ref' in data:
+        filename = Path(data['ref']).with_suffix('.torrent')
+    else:
+        raise IOError('Undetected filename')
     with open(filename, 'wb') as f:
         f.write(r.content)
 
