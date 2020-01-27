@@ -10,7 +10,7 @@ import rfc6266
 
 from bs4 import BeautifulSoup
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlencode
 
 
 LOGGING_LEVELS = {
@@ -20,8 +20,6 @@ LOGGING_LEVELS = {
 }
 
 proxies = None
-logger = logging.getLogger(__name__)
-click_log.basic_config(logger)
 
 
 @click.command()
@@ -30,7 +28,9 @@ click_log.basic_config(logger)
 @click.option('-v', '--verbose', count=True, help='set log level.')
 def mdt(url, proxy, verbose):
     """LoveLive! Master Data Tools."""
-    logging.basicConfig(level=LOGGING_LEVELS.get(verbose, logging.DEBUG))
+    logging.basicConfig(level=LOGGING_LEVELS.get(verbose, logging.INFO))
+    logger = logging.getLogger(__name__)
+    click_log.basic_config(logger)
     logger.info(url)
 
     if proxy:
@@ -41,46 +41,50 @@ def mdt(url, proxy, verbose):
     else:
         proxies = {}
 
-    r = requests.get(url, proxies=proxies)
-    print('Code    :', r.status_code)
-    print('Encoding:', r.encoding)
-    print(r.headers)
-    print('r.url:', r.url)
-
-    dispatch(url)(r)
+    dispatch(url)
 
 
 def dispatch(url):
     hostname = urlparse(url).hostname
     return {
-        'jandown.com': post_form,
         'www.jandown.com': post_form,
-        'rmdown.com': post_form,
         'www.rmdown.com': post_form,
-    }[hostname]
+    }[hostname](url)
 
 
-def post_form(response):
-    print('jandown:')
+def post_form(url):
+    session = requests.Session()
+    response = session.get(url, proxies=proxies)
+
+    print('request URL', url)
+    logging.info('r.url: %s', response.url)
+    logging.info('Code: %s', response.status_code)
+    logging.info('Encoding: %s', response.encoding)
+    logging.info('Response Headers: %s', response.headers)
+
     # print(r.text)
     doc = BeautifulSoup(response.text, 'html5lib')
-    print(doc.form['action'])
-    print('-------')
-    data = {e['name']: e.get('value') for e in doc.form.find_all('input', {'name': True})}
-    print(data)
 
-    print('=======')
-    r = requests.post(urljoin(response.url, doc.form['action']), data=data, proxies=proxies)
-    print(r)
-    print(r.headers)
-    if 'Content-Disposition' in r.headers:
-        filename = rfc6266.parse_headers(r.headers['Content-Disposition']).filename_unsafe
-    elif 'ref' in data:
-        filename = Path(data['ref']).with_suffix('.torrent')
-    else:
-        raise IOError('Undetected filename')
+    next_url = urljoin(response.url, doc.form['action'])
+    method = doc.form['method']
+    logging.info('action: %s', doc.form['action'])
+    logging.info('method: %s', doc.form['method'])
+
+    data = {e['name']: e.get('value') for e in doc.form.find_all('input', {'name': True})}
+    logging.info('params: %s', data)
+
+    logging.info('======= Next Request ========')
+    logging.info('next request: %s, params: %s',  next_url, data)
+    if 'get' == method:
+        response = session.get(next_url, params=data, proxies=proxies)
+    elif 'post' == method:
+        response = session.post(next_url, data=data, proxies=proxies)
+    logging.info('Response Headers: %s', response.headers)
+    # print(r.text)
+    filename = rfc6266.parse_headers(response.headers['Content-Disposition']).filename_unsafe
+    print('Save to file', filename)
     with open(filename, 'wb') as f:
-        f.write(r.content)
+        f.write(response.content)
 
 
 if __name__ == '__main__':
