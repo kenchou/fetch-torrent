@@ -49,12 +49,13 @@ def dispatch(url):
     return {
         'www.jandown.com': post_form,
         'www.rmdown.com': post_form,
+        'xavbt.com': post_form,
     }[hostname](url)
 
 
 def post_form(url):
     session = requests.Session()
-    response = session.get(url, proxies=proxies)
+    response = session.get(url, proxies=proxies, timeout=10)
 
     print('request URL', url)
     logging.info('r.url: %s', response.url)
@@ -76,9 +77,9 @@ def post_form(url):
     logging.info('======= Next Request ========')
     logging.info('next request: %s, params: %s',  next_url, data)
     if 'get' == method:
-        response = session.get(next_url, params=data, proxies=proxies)
+        response = session.get(next_url, params=data, proxies=proxies, timeout=10)
     elif 'post' == method:
-        response = session.post(next_url, data=data, proxies=proxies)
+        response = session.post(next_url, data=data, proxies=proxies, timeout=10)
     logging.info('Response Headers: %s', response.headers)
     # print(r.text)
     filename = rfc6266.parse_headers(response.headers['Content-Disposition']).filename_unsafe
