@@ -6,7 +6,7 @@ import click_log
 import html5lib
 import logging
 import requests
-import rfc6266
+import rfc6266_parser as rfc6266
 
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -47,12 +47,10 @@ def mdt(url, proxy, verbose):
 
 
 def dispatch(url):
-    hostname = urlparse(url).hostname
-    return {
-        'www.jandown.com': post_form,
-        'www.rmdown.com': post_form,
-        'xavbt.com': post_form,
-    }[hostname](url)
+    # hostname = urlparse(url).hostname
+    # special_methods = {}
+    # method = special_methods[hostname]
+    return post_form(url)
 
 
 def post_form(url):
@@ -89,7 +87,10 @@ def post_form(url):
         for resp in response.history:
             print(resp.status_code, resp.url)
     # print(r.text)
-    filename = rfc6266.parse_headers(response.headers['Content-Disposition']).filename_unsafe
+    if 'Content-Disposition' in response.headers:
+        filename = rfc6266.parse_headers(response.headers['Content-Disposition']).filename_unsafe
+    else:
+        filename = Path(urlparse(next_url).path).name
     print('Save to file', filename)
     with open(filename, 'wb') as f:
         f.write(response.content)
