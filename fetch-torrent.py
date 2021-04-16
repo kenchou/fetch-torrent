@@ -27,7 +27,6 @@ proxies = None
 @click.option('--proxy', help='proxy. example: socks5://user:pass@host:port')
 @click.option('-v', '--verbose', count=True, help='set log level.')
 def mdt(url, proxy, verbose):
-    """LoveLive! Master Data Tools."""
     logging.basicConfig(level=LOGGING_LEVELS.get(verbose, logging.INFO))
     logger = logging.getLogger(__name__)
     click_log.basic_config(logger)
@@ -41,7 +40,10 @@ def mdt(url, proxy, verbose):
     else:
         proxies = {}
 
-    dispatch(url)
+    try:
+        dispatch(url)
+    except KeyError:
+        post_form(url)
 
 
 def dispatch(url):
@@ -56,8 +58,9 @@ def dispatch(url):
 def post_form(url):
     session = requests.Session()
     response = session.get(url, proxies=proxies, timeout=10)
+    response.raise_for_status()
 
-    print('request URL', url)
+    print('POST Form: request URL', url)
     logging.info('r.url: %s', response.url)
     logging.info('Code: %s', response.status_code)
     logging.info('Encoding: %s', response.encoding)
@@ -80,13 +83,16 @@ def post_form(url):
         response = session.get(next_url, params=data, proxies=proxies, timeout=10)
     elif 'post' == method:
         response = session.post(next_url, data=data, proxies=proxies, timeout=10)
-    logging.info('Response Headers: %s', response.headers)
+    logging.info('Response URL: %s,  Status: %s, Headers: %s', response.url, response.status_code, response.headers)
+    response.raise_for_status()
+    if response.history:
+        for resp in response.history:
+            print(resp.status_code, resp.url)
     # print(r.text)
     filename = rfc6266.parse_headers(response.headers['Content-Disposition']).filename_unsafe
     print('Save to file', filename)
     with open(filename, 'wb') as f:
         f.write(response.content)
-
 
 if __name__ == '__main__':
     mdt()
