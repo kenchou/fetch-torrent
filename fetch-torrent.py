@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import click
-import click_fish
 import click_log
 import html
 import html5lib
