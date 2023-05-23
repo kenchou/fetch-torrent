@@ -5,4 +5,4 @@ beautifulsoup4 == 4.9.3
 click == 8.0.3
 click_log == 0.3.2
 html5lib == 1.0.1
-requests == 2.26.0
+requests == 2.31.0
